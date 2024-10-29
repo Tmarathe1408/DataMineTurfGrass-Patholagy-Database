@@ -15,3 +15,6 @@ docker pull milvusdb/milvus:v2.4.3-hotfix
 
 docker run -d --name milvus-standalone -p 19530:19530 -p 9091:9091 milvusdb/milvus:v2.4.3-hotfix
 
+milvis download:
+
+wget https://github.com/milvus-io/milvus/releases/download/v2.1.4/milvus-standalone-docker-compose.yml -O docker-compose.yml
