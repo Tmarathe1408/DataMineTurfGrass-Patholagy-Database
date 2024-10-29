@@ -10,3 +10,8 @@ curl -sfL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/stan
 
 bash standalone_embed.sh start
 
+docker pull milvusdb/milvus:v2.4.3-hotfix
+
+
+docker run -d --name milvus-standalone -p 19530:19530 -p 9091:9091 milvusdb/milvus:v2.4.3-hotfix
+
