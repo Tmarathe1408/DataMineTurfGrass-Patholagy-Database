@@ -33,7 +33,8 @@ def create_collection():
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # Primary key
         FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=100),       # Unique identifier
-        FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=384)      # Embedded vector data
+         FieldSchema(name="paragraph_contents", dtype=DataType.FLOAT_VECTOR, dim=512), #Embedded vector data
+        FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=512)      # Embedded vector data
     ]
     
     schema = CollectionSchema(fields=fields, description="Turf grass data collection")
