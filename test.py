@@ -33,6 +33,7 @@ def create_collection():
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # Primary key
         FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=100),       # Unique identifier
+        FieldSchema(name="paragraph_contents", dtype=DataType.FLOAT_VECTOR, dim=384), # Embedded vector data
         FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=384)      # Embedded vector data
     ]
     
@@ -87,17 +88,20 @@ def embed_and_insert_data_from_db(collection, db_path, table_name):
 
     # Assuming the data entry structure is (id, identifier, content); adjust as necessary
     identifier = data_entry[1]
-    content = data_entry[2]
-    print(content)
+    paragraph_content = data_entry[2]
+    table_content = data_entry[3]
+
+    # print ()
     # Initialize the embedding model
     model = SentenceTransformer('all-MiniLM-L6-v2')  # Ensure this model outputs 384-dimensional embeddings
     
     # Generate embedding for the content
-    embedding = model.encode(content).tolist()  # Convert embedding to list
-    print(f"Embedding: {embedding}") # Prints embedding so comment out if not needed. Using for DEMO purposes
+    embedding_paragraph = model.encode(paragraph_content).tolist()  # Convert embedding to list
+
+    embedding_table = model.encode(table_content).tolist()  # Convert embedding to list
 
     # Insert data into the Milvus collection
-    collection.insert([[identifier], [embedding]])
+    collection.insert([[identifier], [embedding_paragraph], [embedding_table]])
     print("Single data entry from SQLite inserted successfully.")
 
 def retrieve_all_data(collection):
