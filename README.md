@@ -32,6 +32,9 @@ Also make sure you are in the directory with all the files. You will also need t
     # Install pymilvus for Milvus interaction
     pip install pymilvus
 
+    # Install PyTOrch as a Prerquisite
+    pip install torch==2.5.0 torchvision==0.20.0 torchaudio==2.5.0
+
     # Install sentence-transformers for generating embeddings
     pip install sentence-transformers
 
