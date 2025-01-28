@@ -63,8 +63,8 @@ def create_index(collection):
     }
     
     # Create the index on the 'table_contents' field
-    collection.create_index(field_name="table_contents", index_params=index_params)
-    print("Index created successfully on 'table_contents'.")
+    collection.create_index(field_name="identifier", index_params=index_params)
+    print("Index created successfully on 'Identifier'.")
 
 
 
@@ -94,6 +94,7 @@ def embed_and_insert_data_from_db(collection, db_path, table_name):
     
     # Generate embedding for the content
     embedding = model.encode(content).tolist()  # Convert embedding to list
+    print(f"Embedding: {embedding}") # Prints embedding so comment out if not needed. Using for DEMO purposes
 
     # Insert data into the Milvus collection
     collection.insert([[identifier], [embedding]])
@@ -110,7 +111,7 @@ def retrieve_all_data(collection):
         print(result)
 
 # Paths and setup
-db_path = "./final_output.db"  # Path to the SQLite database
+db_path = "./final_output_completed.db"  # Path to the SQLite database
 table_name = "grass"  # table name
 
 # Connect to Milvus
@@ -129,6 +130,7 @@ embed_and_insert_data_from_db(collection, db_path, table_name)
 retrieve_all_data(collection)
 
 # Drop collection every run so no need to repeat entries
+# Delete this for future uses
 collection.drop()
 
 
