@@ -32,7 +32,7 @@ def create_collection():
     # Define the schema
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # Primary key
-        FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=100),       # Unique identifier
+        FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=500),       # Unique identifier
         FieldSchema(name="paragraph_contents", dtype=DataType.FLOAT_VECTOR, dim=384), # Embedded vector data
         FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=384)      # Embedded vector data
     ]
@@ -64,8 +64,10 @@ def create_index(collection):
     }
     
     # Create the index on the 'table_contents' field
-    collection.create_index(field_name="identifier", index_params=index_params)
-    print("Index created successfully on 'Identifier'.")
+    collection.create_index(field_name="paragraph_contents", index_params=index_params)
+    collection.create_index(field_name="table_contents", index_params=index_params)
+
+    print("Indexes created successfully on paragraph and table contents.")
 
 
 
@@ -124,11 +126,11 @@ connect_to_milvus()
 # Create the collection
 collection = create_collection()
 
-# Create an index on the collection
-create_index(collection)
-
 # Embed and insert a single entry from SQLite
 embed_and_insert_data_from_db(collection, db_path, table_name)
+
+# Create an index on the collection
+create_index(collection)
 
 # Retrieve all data
 retrieve_all_data(collection)
