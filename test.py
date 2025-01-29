@@ -140,4 +140,3 @@ retrieve_all_data(collection)
 collection.drop()
 
 
-
