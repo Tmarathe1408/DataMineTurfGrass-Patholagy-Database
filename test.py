@@ -138,5 +138,3 @@ retrieve_all_data(collection)
 # Drop collection every run so no need to repeat entries
 # Delete this for future uses
 collection.drop()
-
-
