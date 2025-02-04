@@ -32,7 +32,7 @@ def create_collection():
     # Define the schema
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # Primary key
-        FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=1000),       # Unique identifier
+        FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=500),       # Unique identifier
         FieldSchema(name="paragraph_contents", dtype=DataType.FLOAT_VECTOR, dim=384), # Embedded vector data
         FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=384)      # Embedded vector data
     ]
@@ -76,7 +76,7 @@ def fetch_data_from_sqlite(db_path, table_name):
     cursor = conn.cursor()
     
     # Fetch a single data entry from the specified table
-    cursor.execute(f"SELECT * FROM {table_name} LIMIT 3")  # Adjust query as needed
+    cursor.execute(f"SELECT * FROM {table_name} LIMIT 100")  # Adjust query as needed
     row = cursor.fetchall()
     conn.close()
     return row
@@ -92,7 +92,8 @@ def embed_and_insert_data_from_db(collection, db_path, table_name):
         
     for row in data_entry:
         # Assuming the data entry structure is (id, identifier, content); adjust as necessary
-        identifier = row[1]
+        identi = row[1]
+        identifier = sanitize_identifier(identi[:250], mode="remove")
         paragraph_content = row[2]
         table_content = row[3]
 
@@ -154,6 +155,20 @@ def print_collection_info(collection):
 
     print("=======================\n")
 
+def sanitize_identifier(identifier: str, mode="remove") -> str:
+    """
+    Removes or replaces single quotes in the given identifier string.
+    mode="remove": deletes all single quotes.
+    mode="double": replaces single quotes with double quotes.
+    """
+    if mode == "remove":
+        # Completely remove single quotes
+        return identifier.replace("'", "")
+    elif mode == "double":
+        # Replace single quotes with double quotes
+        return identifier.replace("'", '"')
+    else:
+        return identifier  # No change if mode isn't recognized
 
 # Paths and setup
 db_path = "./final_output_completed.db"  # Path to the SQLite database
