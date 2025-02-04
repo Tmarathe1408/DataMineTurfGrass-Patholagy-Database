@@ -32,7 +32,7 @@ def create_collection():
     # Define the schema
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # Primary key
-        FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=500),       # Unique identifier
+        FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=1000),       # Unique identifier
         FieldSchema(name="paragraph_contents", dtype=DataType.FLOAT_VECTOR, dim=384), # Embedded vector data
         FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=384)      # Embedded vector data
     ]
@@ -76,8 +76,8 @@ def fetch_data_from_sqlite(db_path, table_name):
     cursor = conn.cursor()
     
     # Fetch a single data entry from the specified table
-    cursor.execute(f"SELECT * FROM {table_name} LIMIT 1")  # Adjust query as needed
-    row = cursor.fetchone()  # Gets the first entry
+    cursor.execute(f"SELECT * FROM {table_name} LIMIT 3")  # Adjust query as needed
+    row = cursor.fetchall()
     conn.close()
     return row
 
@@ -87,24 +87,28 @@ def embed_and_insert_data_from_db(collection, db_path, table_name):
     if data_entry is None:
         print("No data found in the database.")
         return
-
-    # Assuming the data entry structure is (id, identifier, content); adjust as necessary
-    identifier = data_entry[1]
-    paragraph_content = data_entry[2]
-    table_content = data_entry[3]
-
-    # print ()
     # Initialize the embedding model
     model = SentenceTransformer('all-MiniLM-L6-v2')  # Ensure this model outputs 384-dimensional embeddings
-    
-    # Generate embedding for the content
-    embedding_paragraph = model.encode(paragraph_content).tolist()  # Convert embedding to list
+        
+    for row in data_entry:
+        # Assuming the data entry structure is (id, identifier, content); adjust as necessary
+        identifier = row[1]
+        paragraph_content = row[2]
+        table_content = row[3]
 
-    embedding_table = model.encode(table_content).tolist()  # Convert embedding to list
+        # Check to see if identifier was already inserted
+        if identifier_exists(collection, identifier):
+            print(f"Identifier: '{identifier}' already exists in Milvus. Skipping insert.\n")
+        else:    
+            # Generate embedding for the content
+            embedding_paragraph = model.encode(paragraph_content).tolist()  # Convert embedding to list
 
-    # Insert data into the Milvus collection
-    collection.insert([[identifier], [embedding_paragraph], [embedding_table]])
-    print("Single data entry from SQLite inserted successfully.")
+            embedding_table = model.encode(table_content).tolist()  # Convert embedding to list
+
+            # Insert data into the Milvus collection
+            collection.insert([[identifier], [embedding_paragraph], [embedding_table]])
+            collection.flush()
+            print("Single data entry from SQLite inserted successfully.")
 
 def retrieve_all_data(collection):
     # Load the collection into memory
@@ -116,6 +120,41 @@ def retrieve_all_data(collection):
     for result in results:
         print(result)
 
+def identifier_exists(collection, identifier_value):
+    # Load collection into memory for querying
+    collection.load()
+
+    # Build an expression to query by the string field "identifier"
+    expr = f"identifier == '{identifier_value}'"
+    
+    # Return only the "identifier" field, limit=1 to just see if there's at least one match
+    results = collection.query(expr=expr, output_fields=["identifier"], limit=1)
+    
+    # If 'results' is not empty, we have a match
+    return len(results) > 0
+
+
+def print_collection_info(collection):
+    print("=== Collection Info ===")
+    print("Name:", collection.name)
+    print("Description:", collection.description)
+    print("Number of entities:", collection.num_entities)
+    print("\nSchema:")
+    for field in collection.schema.fields:
+        print(f"  - {field.name}, type: {field.dtype}, is_primary: {field.is_primary}")
+
+    print("\nIndexes:")
+    if collection.indexes:
+        for idx in collection.indexes:
+            print(f"  - Field name: {idx.field_name}")
+            print(f"    - Index type: {idx.index_name}")
+            print(f"    - Params: {idx.params}")
+    else:
+        print("  No indexes found.")
+
+    print("=======================\n")
+
+
 # Paths and setup
 db_path = "./final_output_completed.db"  # Path to the SQLite database
 table_name = "grass"  # table name
@@ -126,15 +165,17 @@ connect_to_milvus()
 # Create the collection
 collection = create_collection()
 
+# Create an index on the collection
+create_index(collection)
+
 # Embed and insert a single entry from SQLite
 embed_and_insert_data_from_db(collection, db_path, table_name)
 
-# Create an index on the collection
-create_index(collection)
 
 # Retrieve all data
 retrieve_all_data(collection)
 
 # Drop collection every run so no need to repeat entries
 # Delete this for future uses
-collection.drop()
+print_collection_info(collection)
+
