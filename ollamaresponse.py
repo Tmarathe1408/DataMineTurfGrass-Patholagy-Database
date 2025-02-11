@@ -5,6 +5,7 @@ import ollama
 _HOST = "127.0.0.1"  # Or localhost
 _PORT = "19530"  # Default gRPC port for Milvus Standalone
 # Connect to Milvus
+
 def connect_to_milvus(db_name="default"):
     print(f"Connecting to Milvus...\n")
     
