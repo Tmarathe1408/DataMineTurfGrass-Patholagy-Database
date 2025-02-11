@@ -6,7 +6,7 @@ import numpy as np
 # Milvus connection details
 _HOST = "127.0.0.1"  # Or localhost
 _PORT = "19530"  # Default gRPC port for Milvus Standalone
-
+model = SentenceTransformer('all-MiniLM-L6-v2')  # Ensure this model outputs 384-dimensional embeddings
 def connect_to_milvus(db_name="default"):
     print(f"Connecting to Milvus...\n")
     
@@ -32,6 +32,7 @@ def create_collection():
     # Define the schema
     fields = [
         FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),  # Primary key
+        FieldSchema(name="ids", dtype=DataType.INT16),
         FieldSchema(name="identifier", dtype=DataType.VARCHAR, max_length=500),       # Unique identifier
         FieldSchema(name="paragraph_contents", dtype=DataType.FLOAT_VECTOR, dim=384), # Embedded vector data
         FieldSchema(name="table_contents", dtype=DataType.FLOAT_VECTOR, dim=384)      # Embedded vector data
@@ -76,7 +77,7 @@ def fetch_data_from_sqlite(db_path, table_name):
     cursor = conn.cursor()
     
     # Fetch a single data entry from the specified table
-    cursor.execute(f"SELECT * FROM {table_name} LIMIT 100")  # Adjust query as needed
+    cursor.execute(f"SELECT * FROM {table_name} ")  # Adjust query as needed
     row = cursor.fetchall()
     conn.close()
     return row
@@ -88,17 +89,18 @@ def embed_and_insert_data_from_db(collection, db_path, table_name):
         print("No data found in the database.")
         return
     # Initialize the embedding model
-    model = SentenceTransformer('all-MiniLM-L6-v2')  # Ensure this model outputs 384-dimensional embeddings
+   
         
     for row in data_entry:
-        # Assuming the data entry structure is (id, identifier, content); adjust as necessary
+        # Assuming the data entry structure is (id, identifier, paragraph content, table content); adjust as necessary
+        ids = row[0]
         identi = row[1]
         identifier = sanitize_identifier(identi[:250], mode="remove")
         paragraph_content = row[2]
         table_content = row[3]
 
         # Check to see if identifier was already inserted
-        if identifier_exists(collection, identifier):
+        if identifier_exists(collection, ids):
             print(f"Identifier: '{identifier}' already exists in Milvus. Skipping insert.\n")
         else:    
             # Generate embedding for the content
@@ -107,7 +109,7 @@ def embed_and_insert_data_from_db(collection, db_path, table_name):
             embedding_table = model.encode(table_content).tolist()  # Convert embedding to list
 
             # Insert data into the Milvus collection
-            collection.insert([[identifier], [embedding_paragraph], [embedding_table]])
+            collection.insert([[ids],[identifier], [embedding_paragraph], [embedding_table]])
             collection.flush()
             print("Single data entry from SQLite inserted successfully.")
 
@@ -121,15 +123,15 @@ def retrieve_all_data(collection):
     for result in results:
         print(result)
 
-def identifier_exists(collection, identifier_value):
+def identifier_exists(collection, ids_value):
     # Load collection into memory for querying
     collection.load()
 
-    # Build an expression to query by the string field "identifier"
-    expr = f"identifier == '{identifier_value}'"
+    # Build an expression to query by the string field "ids"
+    expr = f"ids == {ids_value}"
     
     # Return only the "identifier" field, limit=1 to just see if there's at least one match
-    results = collection.query(expr=expr, output_fields=["identifier"], limit=1)
+    results = collection.query(expr=expr, output_fields=["ids"], limit=1)
     
     # If 'results' is not empty, we have a match
     return len(results) > 0
@@ -179,7 +181,7 @@ connect_to_milvus()
 
 # Create the collection
 collection = create_collection()
-
+#collection.drop()
 # Create an index on the collection
 create_index(collection)
 
