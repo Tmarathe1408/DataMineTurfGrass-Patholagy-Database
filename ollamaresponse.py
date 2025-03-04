@@ -1,11 +1,11 @@
 from pymilvus import connections, db, utility, Collection, FieldSchema, CollectionSchema, DataType
 from sentence_transformers import SentenceTransformer
 import ollama
+import sqlite3
 
 _HOST = "127.0.0.1"  # Or localhost
 _PORT = "19530"  # Default gRPC port for Milvus Standalone
 # Connect to Milvus
-
 def connect_to_milvus(db_name="default"):
     print(f"Connecting to Milvus...\n")
     
@@ -40,7 +40,7 @@ def get_embedding(text):
 
 # Query the database
 def askOllama(text):
-    query_text = " "
+    query_text = text
     query_embedding = get_embedding(query_text)
       #  "index_type": "IVF_FLAT",
     
@@ -52,18 +52,23 @@ def askOllama(text):
         param=search_params, 
         limit=5
     )
-
-    # Print retrieved results
+    ids_to_retrieve = []
     for result in results[0]:
-        print(f"ID: {result.id}, Distance: {result.distance}")
-    # Extract the top results as context
-    context = "\n".join([str(res.id) for res in list(results[0])])
+        print(result)
+        print("/n")
+        print(f"ID: {result.ids}, Distance: {result.distance}")
+        ids_to_retrieve.append(result.id)  # Collect the IDs for further processing
+    
+    print(f"IDs to retrieve: {ids_to_retrieve}")
+
+    # Fetch the corresponding data from SQLite
+    context = "\n".join([fetch_data_from_sqlite(id) for id in ids_to_retrieve])
     return context
 
 def generateresponse(text) : # Generate a response using Ollama
     context = askOllama(text)
     response = ollama.chat(
-        model="llama_3.2",  # Adjust model as needed
+        model="llama3.2",  # Adjust model as needed
         messages=[
             {"role": "system", "content": "You are an expert in turfgrass and plant diseases."},
             {"role": "user", "content": f"Based on the following data, explain:\n{context}"}
@@ -71,6 +76,18 @@ def generateresponse(text) : # Generate a response using Ollama
     )
 
     print(response["message"]["content"])
+def fetch_data_from_sqlite(ids):
+    db_path = "./final_output_completed.db"
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Fetch a single data entry from the specified table
+    query = "SELECT Paragraph_Contents FROM grass WHERE id = ?"
+    cursor.execute(query, (ids,))  # Tuple passed to parameterized query
+    # Adjust query as needed
+    row = cursor.fetchall()
+    conn.close()
+    return row
 
 #ask question
 generateresponse("Explain the effects of DMI fungicides on Bermuda grass")
